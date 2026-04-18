@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My AI Tool</title>
+    <script src="https://js.puter.com/v2/"></script>
+</head>
+<body>
+    <h1>AI Chat</h1>
+    <div id="response">Waiting for AI...</div>
+
+    <script>
+        puter.ai.chat("Explain how to build a payroll system in Python", {
+            model: "openai/gpt-4o-mini"
+        })
+        .then(response => {
+            document.getElementById('response').innerText =
+                response.message?.content || JSON.stringify(response);
+        })
+        .catch(err => {
+            document.getElementById('response').innerText = "Error: " + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>
