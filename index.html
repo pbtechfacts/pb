@@ -1,25 +1,1457 @@
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My AI Tool</title>
-    <script src="https://js.puter.com/v2/"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Accessible Indian Train Simulator (AITS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            touch-action: none;
+        }
+        .glow-red {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+        .glow-green {
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+        }
+        .rail-track {
+            background: repeating-linear-gradient(
+                90deg,
+                #475569,
+                #475569 10px,
+                #1e293b 10px,
+                #1e293b 30px
+            );
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        button:focus, select:focus, input[type="range"]:focus {
+            outline: 3px solid #f59e0b !important;
+            outline-offset: 2px;
+        }
+    </style>
 </head>
-<body>
-    <h1>AI Chat</h1>
-    <div id="response">Waiting for AI...</div>
+<body class="min-h-screen flex flex-col justify-between">
 
+    <!-- ARIA LIVE REGIONS -->
+    <div id="sr-announcer-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+    <div id="sr-announcer-polite" class="sr-only" aria-live="polite"></div>
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl" aria-hidden="true">🚂</span>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black text-amber-500 tracking-wide">
+                        Accessible Indian Train Simulator
+                    </h1>
+                    <p class="text-xs text-slate-400 font-semibold tracking-widest uppercase">AITS Project Alpha</p>
+                </div>
+            </div>
+            <div class="bg-slate-800 px-3 py-1.5 rounded-md border border-slate-700 text-xs md:text-sm text-slate-300 font-mono" aria-label="System status version">
+                IR Cabin System v1.7.0
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE SECTION -->
+    <main class="flex-grow flex items-center justify-center p-4 relative">
+        
+        <!-- STEP 1: TRAIN SELECTOR MENU (LANDING SCREEN) -->
+        <section id="selection-screen" class="w-full max-w-lg bg-slate-900/90 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden" aria-labelledby="selection-heading">
+            <div class="absolute top-0 left-0 right-0 h-1.5 flex" aria-hidden="true">
+                <div class="w-1/3 bg-[#FF9933]"></div>
+                <div class="w-1/3 bg-white"></div>
+                <div class="w-1/3 bg-[#138808]"></div>
+            </div>
+
+            <div class="text-center mb-6">
+                <span class="inline-block bg-amber-500/10 text-amber-500 font-mono text-xs px-2.5 py-1 rounded-full border border-amber-500/20 mb-3" aria-label="Railway Jurisdiction">
+                    Indian Railways • भारतीय रेल
+                </span>
+                <h2 id="selection-heading" class="text-2xl md:text-3xl font-bold text-white mb-2">Locomotive Pilot Portal</h2>
+                <p class="text-sm text-slate-400">Configure your train route and step inside the high-horsepower engine room cabin.</p>
+            </div>
+
+            <div class="space-y-5">
+                <!-- Train Service Dropdown -->
+                <div>
+                    <label for="train-select" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Select Active Train Service (Train Number)
+                    </label>
+                    <div class="relative">
+                        <select id="train-select" class="w-full bg-slate-850 border border-slate-700 rounded-xl p-4 text-white font-mono text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer" aria-describedby="train-details-card">
+                            <option value="12796" data-name="Lingampally - Vijayawada Intercity Express" data-loco="WDP-4D (Diesel)">
+                                12796 — Lingampally (LPI) to Vijayawada (BZA)
+                            </option>
+                            <option value="12795" data-name="Vijayawada - Lingampally Intercity Express" data-loco="WDP-4D (Diesel)">
+                                12795 — Vijayawada (BZA) to Lingampally (LPI)
+                            </option>
+                            <option value="12805" data-name="Visakhapatnam - Secunderabad Janmabhoomi Express" data-loco="WDP-4D (Diesel)">
+                                12805 — Visakhapatnam (VSKP) to Secunderabad (SC)
+                            </option>
+                            <option value="12806" data-name="Secunderabad - Visakhapatnam Janmabhoomi Express" data-loco="WDP-4D (Diesel)">
+                                12806 — Secunderabad (SC) to Visakhapatnam (VSKP)
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Train Specifications Card -->
+                <div id="train-details-card" class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-1">
+                    <div class="flex justify-between items-center text-[11px] text-slate-400">
+                        <span>SERVICE TYPE</span>
+                        <span class="font-semibold text-amber-500">SUPERFAST EXPRESS</span>
+                    </div>
+                    <div id="train-full-name" class="text-sm md:text-base font-bold text-slate-200">
+                        Lingampally - Vijayawada Intercity Express
+                    </div>
+                    <div class="h-px bg-slate-800 my-1.5"></div>
+                    <div class="flex justify-between items-center text-[11px] text-slate-400">
+                        <span>DEFAULT LOCOMOTIVE</span>
+                        <span id="loco-model" class="font-mono font-bold text-sky-400">WDP-4D (Diesel)</span>
+                    </div>
+                </div>
+
+                <!-- Voice Selection Options Config -->
+                <div class="bg-slate-950/40 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div>
+                        <label for="voice-select" class="block text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">
+                            Audio Co-Pilot Announcement Engine
+                        </label>
+                        <select id="voice-select" class="w-full bg-slate-850 border border-slate-700 rounded-xl p-3 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer" aria-describedby="voice-warning-notice">
+                            <option value="default_system">Default Browser Voice Accent (Highly Recommended)</option>
+                        </select>
+                    </div>
+
+                    <div id="voice-warning-notice" class="bg-blue-950/30 border border-blue-900/40 p-3 rounded-lg flex gap-3">
+                        <span class="text-lg text-blue-400 select-none" aria-hidden="true">ℹ️</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-0.5">Dual-Voice Conflict Protection</h4>
+                            <p class="text-[11px] text-blue-300 leading-relaxed">
+                                To prevent overlapping your screen reader voice (Eloquence/e-speak), the game utilizes the browser's separate offline Speech Engine, allowing clean background train stats announcements.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start Button -->
+                <button id="start-cabin-btn" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold py-4 px-6 rounded-xl transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 text-lg" aria-label="Enter Loco Pilot Cabin and start simulator">
+                    <span>Enter Loco Pilot Cabin</span>
+                    <span class="text-xl" aria-hidden="true">🚪🔑</span>
+                </button>
+            </div>
+            
+            <p class="text-center text-[11px] text-slate-500 mt-6">
+                Designed for high accessibility. Audio synthesizer handles multi-thread sound waves.
+            </p>
+        </section>
+
+
+        <!-- STEP 2: LOCO PILOT CABIN ENVIRONMENT (SIMULATION SCREEN) -->
+        <section id="cabin-screen" class="hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-2xl flex flex-col gap-4 relative" tabindex="-1" style="outline: none;" aria-label="Loco Pilot Cabin Dashboard">
+            
+            <!-- GAME OVER OVERLAY -->
+            <div id="game-over-overlay" class="hidden absolute inset-0 bg-black/95 z-40 flex flex-col justify-center items-center p-6 text-center rounded-2xl border border-red-500/40" role="dialog" aria-modal="true" aria-labelledby="game-over-title" aria-describedby="game-over-message">
+                <div class="w-20 h-20 bg-red-600/10 border border-red-500 rounded-full flex items-center justify-center text-4xl mb-4 animate-bounce">
+                    ⚠️
+                </div>
+                <h2 class="text-red-500 text-3xl font-black tracking-wider uppercase mb-2 glow-red">JOURNEY TERMINATED</h2>
+                <h3 id="game-over-title" class="text-xl font-bold text-slate-200 mb-4">Signal Violation: Station Overshoot!</h3>
+                <p id="game-over-message" class="text-sm text-slate-400 max-w-md mb-6 leading-relaxed">
+                    You crossed the designated intermediate station platform at speed without stopping. The railway division has suspended your license.
+                </p>
+                <button id="restart-game-btn" class="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    Restart Simulation Portal
+                </button>
+            </div>
+
+            <!-- Dashboard Top Header -->
+            <div class="flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl animate-pulse" aria-hidden="true">⚡</span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-bold font-mono">LIVE CABIN</span>
+                            <span id="active-train-number" class="text-lg font-mono font-bold text-amber-400">12796</span>
+                            <span class="text-xs bg-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-bold font-mono border border-amber-500/30">
+                                POINTS: <span id="points-display">0</span>
+                            </span>
+                        </div>
+                        <h3 id="active-train-name" class="text-xs text-slate-400 font-medium">Lingampally - Vijayawada Intercity Express</h3>
+                    </div>
+                </div>
+                <button id="exit-cabin-btn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-2 rounded-lg border border-slate-700 transition" aria-label="Exit Cabin and return to selection portal">
+                    ← Exit Cabin
+                </button>
+            </div>
+
+            <!-- Cabin Visuals & Controls Combined -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Left/Center Column: Scenery view -->
+                <div class="lg:col-span-8 flex flex-col gap-4">
+                    <div class="relative bg-slate-950 border-4 border-slate-700 rounded-xl overflow-hidden h-48 md:h-64 flex flex-col justify-between" aria-hidden="true">
+                        <div class="absolute top-2 left-2 z-10 bg-black/60 px-2 py-1 rounded text-xs font-mono text-emerald-400 border border-emerald-500/30">
+                            SIGNAL: <span id="signal-state" class="font-bold">PROCEED (GREEN)</span>
+                        </div>
+                        <div class="absolute top-2 right-2 z-10 flex gap-2">
+                            <div class="bg-black/60 px-2 py-1 rounded text-xs font-mono text-sky-400 border border-sky-500/30">
+                                OHE: <span class="font-bold">25 kV AC</span>
+                            </div>
+                        </div>
+
+                        <!-- Scenery animation container -->
+                        <div class="relative flex-grow overflow-hidden flex items-end">
+                            <div class="absolute inset-0 bg-gradient-to-b from-sky-900 to-indigo-950"></div>
+                            <div class="absolute bottom-12 right-24 w-12 h-12 rounded-full bg-amber-500/30 blur-sm"></div>
+
+                            <svg class="absolute bottom-6 left-0 w-full h-12 text-indigo-950/40" viewBox="0 0 100 10" preserveAspectRatio="none">
+                                <polygon points="0,10 15,3 30,10 45,2 65,10 85,1 100,10" fill="currentColor"/>
+                            </svg>
+
+                            <div id="scenery-elements" class="absolute inset-0 pointer-events-none"></div>
+
+                            <div class="w-full h-8 bg-slate-800 border-t border-slate-600 relative flex items-center justify-center">
+                                <div class="absolute w-2/3 h-full border-x-4 border-amber-600/60 transform origin-bottom scale-x-110"></div>
+                                <div class="w-full h-full rail-track opacity-50"></div>
+                            </div>
+                        </div>
+
+                        <div class="h-2 bg-slate-800 border-t border-slate-700 w-full"></div>
+                    </div>
+
+                    <!-- Audio Synth -->
+                    <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl" aria-hidden="true">🔊</span>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-200">Locomotive Sound Synthesizer</h4>
+                                <p class="text-xs text-slate-400">WDP-4D diesel thrum, jointed rail clanks, and cabin wind hiss. Shortcuts: W/S (Throttle), B (Brake), Space/H (Horn), E (Emergency).</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button id="horn-btn" class="flex-grow md:flex-none bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-2.5 rounded-lg active:scale-95 transition text-sm tracking-wider uppercase shadow-md shadow-amber-500/20" aria-label="Sound locomotive high dual tone air horn">
+                                📣 SOUND HORN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Locomotive Controls Panel -->
+                <div class="lg:col-span-4 flex flex-col gap-4">
+                    <!-- Gauge Cluster -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-center items-center relative overflow-hidden">
+                        <div class="text-center">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Speedometer</span>
+                            <div class="text-5xl font-mono font-black text-emerald-400 glow-green my-2" id="speed-display">
+                                0 <span class="text-lg font-normal text-slate-500">km/h</span>
+                            </div>
+                            <div class="text-xs text-slate-500" id="traction-display">Traction Status: Neutral</div>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden" aria-hidden="true">
+                            <div id="speed-bar" class="bg-gradient-to-r from-emerald-500 to-amber-500 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- Master Controller Throttle (Reverser + Throttle) -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Master Control Throttle</h4>
+                        
+                        <!-- Throttle slider -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs font-mono">
+                                <label for="throttle-slider" class="text-slate-400">Throttle Level:</label>
+                                <span id="throttle-value-display" class="font-bold text-amber-400">0 %</span>
+                            </div>
+                            <input type="range" id="throttle-slider" min="0" max="100" step="10" value="0" class="w-full accent-amber-500 h-2 bg-slate-800 rounded-lg cursor-pointer" aria-label="Engine Throttle Lever" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 percent power">
+                        </div>
+
+                        <!-- Quick control buttons -->
+                        <div class="grid grid-cols-4 gap-1 pt-2">
+                            <button id="coast-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-bold text-[9px] border border-slate-700 transition" aria-label="Set throttle to zero percent power coasting">
+                                Coast (0%)
+                            </button>
+                            <button id="brake-btn" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 py-2 rounded-lg font-bold text-[9px] border border-amber-800 transition" aria-label="Apply pneumatic brakes to slow down">
+                                Apply Brake
+                            </button>
+                            <button id="quick-horn-btn" class="bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 py-2 rounded-lg font-bold text-[9px] border border-amber-500 transition" aria-label="Sound locomotive dual tone horn quickly">
+                                Sound Horn
+                            </button>
+                            <button id="max-btn" class="bg-sky-950/50 hover:bg-sky-950 text-sky-400 py-2 rounded-lg font-bold text-[9px] border border-sky-800 transition" aria-label="Apply maximum power throttle">
+                                Max Power
+                            </button>
+                        </div>
+
+                        <!-- Emergency Brake -->
+                        <button id="emergency-brake-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg active:scale-[0.97] flex items-center justify-center gap-2 border border-red-500 shadow-red-600/20" aria-label="Trigger Locomotive Emergency Brake">
+                            <span aria-hidden="true">🚨</span> EMERGENCY BRAKE
+                        </button>
+                    </div>
+
+                    <!-- Pilot Diagnostics Info -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs font-mono space-y-2" aria-label="Locomotive Diagnostics" role="group">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Selected Loco:</span>
+                            <span id="diagnostic-loco" class="text-slate-300">WDP-4D</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Service Path:</span>
+                            <span id="diagnostic-route" class="text-slate-300 text-right truncate max-w-[150px]">LPI - BZA</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">OHE Tension:</span>
+                            <span class="text-emerald-400">Normal (25kV)</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-900 p-4 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© 2026 Accessible Indian Train Simulator (AITS). Developed for safety and accessibility.</p>
+            <p class="font-mono text-[10px] text-slate-600">Simulating Broad Gauge 1676mm operations</p>
+        </div>
+    </footer>
+
+    <!-- INTERACTION LOGIC & GAMEPLAY SOUND ENGINE -->
     <script>
-        puter.ai.chat("Explain how to build a payroll system in Python", {
-            model: "openai/gpt-4o-mini"
-        })
-        .then(response => {
-            document.getElementById('response').innerText =
-                response.message?.content || JSON.stringify(response);
-        })
-        .catch(err => {
-            document.getElementById('response').innerText = "Error: " + err.message;
-            console.error(err);
+        // --- DATA DICTIONARY ---
+        const trainDatabase = {
+            "12796": {
+                name: "Lingampally - Vijayawada Intercity Express",
+                loco: "WDP-4D (Diesel)",
+                route: "LPI - BZA",
+                maxSpeed: 130,
+                stations: [
+                    { name: "Secunderabad", dist: 25.0 },
+                    { name: "Nalgonda", dist: 135.0 },
+                    { name: "Guntur", dist: 260.0 },
+                    { name: "Vijayawada", dist: 295.0 }
+                ]
+            },
+            "12795": {
+                name: "Vijayawada - Lingampally Intercity Express",
+                loco: "WDP-4D (Diesel)",
+                route: "BZA - LPI",
+                maxSpeed: 130,
+                stations: [
+                    { name: "Guntur", dist: 35.0 },
+                    { name: "Nalgonda", dist: 160.0 },
+                    { name: "Secunderabad", dist: 270.0 },
+                    { name: "Lingampally", dist: 295.0 }
+                ]
+            },
+            "12805": {
+                name: "Visakhapatnam - Secunderabad Janmabhoomi Express",
+                loco: "WDP-4D (Diesel)",
+                route: "VSKP - SC",
+                maxSpeed: 130,
+                stations: [
+                    { name: "Samalkot", dist: 150.0 },
+                    { name: "Rajahmundry", dist: 200.0 },
+                    { name: "Vijayawada", dist: 350.0 },
+                    { name: "Secunderabad", dist: 700.0 }
+                ]
+            },
+            "12806": {
+                name: "Secunderabad - Visakhapatnam Janmabhoomi Express",
+                loco: "WDP-4D (Diesel)",
+                route: "SC - VSKP",
+                maxSpeed: 130,
+                stations: [
+                    { name: "Vijayawada", dist: 350.0 },
+                    { name: "Rajahmundry", dist: 500.0 },
+                    { name: "Samalkot", dist: 550.0 },
+                    { name: "Visakhapatnam", dist: 700.0 }
+                ]
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const trainSelect = document.getElementById('train-select');
+        const voiceSelect = document.getElementById('voice-select');
+        const trainFullName = document.getElementById('train-full-name');
+        const locoModel = document.getElementById('loco-model');
+        const startCabinBtn = document.getElementById('start-cabin-btn');
+        const exitCabinBtn = document.getElementById('exit-cabin-btn');
+
+        const selectionScreen = document.getElementById('selection-screen');
+        const cabinScreen = document.getElementById('cabin-screen');
+
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const gameOverTitle = document.getElementById('game-over-title');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const restartGameBtn = document.getElementById('restart-game-btn');
+
+        const activeTrainNumber = document.getElementById('active-train-number');
+        const activeTrainName = document.getElementById('active-train-name');
+        const diagnosticLoco = document.getElementById('diagnostic-loco');
+        const diagnosticRoute = document.getElementById('diagnostic-route');
+        const pointsDisplay = document.getElementById('points-display');
+
+        // Controls
+        const speedDisplay = document.getElementById('speed-display');
+        const speedBar = document.getElementById('speed-bar');
+        const tractionDisplay = document.getElementById('traction-display');
+        const throttleSlider = document.getElementById('throttle-slider');
+        const throttleValueDisplay = document.getElementById('throttle-value-display');
+        const emergencyBrakeBtn = document.getElementById('emergency-brake-btn');
+        const coastBtn = document.getElementById('coast-btn');
+        const brakeBtn = document.getElementById('brake-btn');
+        const quickHornBtn = document.getElementById('quick-horn-btn');
+        const maxBtn = document.getElementById('max-btn');
+        const hornBtn = document.getElementById('horn-btn');
+        const signalState = document.getElementById('signal-state');
+        const sceneryElements = document.getElementById('scenery-elements');
+
+        // Accessibility Announcers
+        const srAssertive = document.getElementById('sr-announcer-assertive');
+        const srPolite = document.getElementById('sr-announcer-polite');
+
+        // --- SIMULATION STATE ---
+        let selectedTrainCode = "12796";
+        let speed = 0; 
+        let targetSpeed = 0;
+        let throttlePercent = 0;
+        let emergencyActive = false;
+        let brakeActive = false;
+        let soundInitialized = false;
+        let gameActive = false;
+        let scorePoints = 0;
+        
+        let activeStationsList = [];
+        let currentStationIndex = 0;
+        let distanceTravelled = 0;
+
+        let scaleTimeMultiplier = 20; 
+        let atIntermediateStationHalt = false;
+        let departureAuthorized = true;
+
+        let lastRenderedSpeed = -1;
+        let lastRenderedTraction = "";
+        let lastRenderedSignal = "";
+        let lastAnnouncedSpeed = -1;
+
+        let announcerInterval = null;
+        let lastClackTime = 0;
+        let lastBeaconTime = 0;
+
+        let poles = [];
+        let sceneryAnimationId = null;
+
+        // --- WEB AUDIO API SYNTHESIZER ---
+        let audioCtx = null;
+        let activeHornOscillators = [];
+        let activeHornGain = null;
+        let hornActive = false;
+
+        // Diesel engine thrums
+        let engineBaseOsc = null;
+        let engineDizzleBuzz = null;
+        let engineFilter = null;
+        let engineGain = null;
+
+        // Coast low air rushing draft sound components
+        let airNoiseSource = null;
+        let airFilter = null;
+        let airFlowGain = null;
+
+        // Brake sounds
+        let brakeSquealOsc = null;
+        let brakeSquealGain = null;
+
+        let keysPressed = {};
+
+        // --- DYNAMIC TTS VOICE LOADING SYSTEM ---
+        let systemVoicesList = [];
+        let chosenVoiceObject = null;
+
+        // Populate dropdown with available speech options
+        function populateVoiceSelectorList() {
+            if (typeof speechSynthesis === 'undefined') return;
+            
+            systemVoicesList = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+
+            if (systemVoicesList.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = 'Default Browser Engine Voice';
+                option.value = 'default_system';
+                voiceSelect.appendChild(option);
+                return;
+            }
+
+            systemVoicesList.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                
+                const isLocal = voice.localService ? 'Offline' : 'Cloud Engine';
+                option.textContent = `${voice.name} (${voice.lang}) — [${isLocal}]`;
+                
+                if (voice.default || voice.lang.startsWith('en-IN') || voice.lang.startsWith('en-US') || voice.lang.startsWith('en-GB')) {
+                    option.selected = true;
+                }
+                
+                voiceSelect.appendChild(option);
+            });
+
+            updateSelectedVoiceReference();
+        }
+
+        function updateSelectedVoiceReference() {
+            const selectedIdx = voiceSelect.value;
+            if (selectedIdx !== 'default_system' && systemVoicesList[selectedIdx]) {
+                chosenVoiceObject = systemVoicesList[selectedIdx];
+            } else {
+                chosenVoiceObject = null;
+            }
+        }
+
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoiceSelectorList;
+        }
+        populateVoiceSelectorList();
+
+        voiceSelect.addEventListener('change', () => {
+            updateSelectedVoiceReference();
+            if (chosenVoiceObject) {
+                voiceSpeak(`Voice changed to ${chosenVoiceObject.name}`);
+            } else {
+                voiceSpeak("Using default browser system voice");
+            }
         });
+
+
+        // --- APPLICATION TEXT-TO-SPEECH RUNNER ---
+        function voiceSpeak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Clear previous speech stream instantly
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.15; 
+                
+                if (chosenVoiceObject) {
+                    utterance.voice = chosenVoiceObject;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            }
+            srAssertive.innerText = '';
+            setTimeout(() => { srAssertive.innerText = text; }, 50);
+        }
+
+        function speak(text, priority = 'polite') {
+            if (priority === 'assertive') {
+                voiceSpeak(text);
+            } else {
+                srPolite.innerText = '';
+                setTimeout(() => { srPolite.innerText = text; }, 50);
+            }
+        }
+
+        // --- AUDIO ENGINE INITIALIZATION ---
+        function initAudio() {
+            if (soundInitialized) return;
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+
+                // 1. Diesel Heavy Acceleration Engine Synth
+                engineGain = audioCtx.createGain();
+                engineGain.gain.setValueAtTime(0.01, audioCtx.currentTime); 
+
+                engineFilter = audioCtx.createBiquadFilter();
+                engineFilter.type = 'lowpass';
+                engineFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
+
+                engineBaseOsc = audioCtx.createOscillator();
+                engineBaseOsc.type = 'sawtooth';
+                engineBaseOsc.frequency.setValueAtTime(55, audioCtx.currentTime); 
+
+                engineDizzleBuzz = audioCtx.createOscillator();
+                engineDizzleBuzz.type = 'triangle';
+                engineDizzleBuzz.frequency.setValueAtTime(110, audioCtx.currentTime); 
+
+                engineBaseOsc.connect(engineFilter);
+                engineDizzleBuzz.connect(engineFilter);
+                engineFilter.connect(engineGain);
+                engineGain.connect(audioCtx.destination);
+
+                engineBaseOsc.start();
+                engineDizzleBuzz.start();
+
+                // 2. Continuous Air Flow/Hiss Sound (Wind draft during coasting)
+                airFlowGain = audioCtx.createGain();
+                airFlowGain.gain.setValueAtTime(0.005, audioCtx.currentTime); 
+
+                airFilter = audioCtx.createBiquadFilter();
+                airFilter.type = 'lowpass';
+                airFilter.frequency.setValueAtTime(320, audioCtx.currentTime);
+
+                const airBufferSize = audioCtx.sampleRate * 2;
+                const airBuffer = audioCtx.createBuffer(1, airBufferSize, audioCtx.sampleRate);
+                const airData = airBuffer.getChannelData(0);
+                for (let i = 0; i < airBufferSize; i++) {
+                    airData[i] = Math.random() * 2 - 1;
+                }
+
+                airNoiseSource = audioCtx.createBufferSource();
+                airNoiseSource.buffer = airBuffer;
+                airNoiseSource.loop = true;
+
+                airNoiseSource.connect(airFilter);
+                airFilter.connect(airFlowGain);
+                airFlowGain.connect(audioCtx.destination);
+                airNoiseSource.start();
+
+                // 3. Brake nodes
+                brakeSquealGain = audioCtx.createGain();
+                brakeSquealGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                brakeSquealGain.connect(audioCtx.destination);
+
+                soundInitialized = true;
+            } catch (e) {
+                console.warn("Audio Context init error:", e);
+            }
+        }
+
+        // Play dual tone diesel horns (Indian railways)
+        function playHorn() {
+            initAudio();
+            if (!audioCtx || hornActive) return;
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            hornActive = true;
+
+            const thisGain = audioCtx.createGain();
+            thisGain.connect(audioCtx.destination);
+            
+            hornOscillator1 = audioCtx.createOscillator();
+            hornOscillator2 = audioCtx.createOscillator();
+            hornOscillator3 = audioCtx.createOscillator();
+            
+            hornOscillator1.type = 'sawtooth';
+            hornOscillator2.type = 'sawtooth';
+            hornOscillator3.type = 'sawtooth';
+
+            hornOscillator1.frequency.setValueAtTime(370, now); 
+            hornOscillator2.frequency.setValueAtTime(440, now); 
+            hornOscillator3.frequency.setValueAtTime(660, now); 
+
+            hornOscillator1.connect(thisGain);
+            hornOscillator2.connect(thisGain);
+            hornOscillator3.connect(thisGain);
+
+            thisGain.gain.setValueAtTime(0, now);
+            thisGain.gain.linearRampToValueAtTime(0.42, now + 0.05);
+
+            hornOscillator1.start(now);
+            hornOscillator2.start(now);
+            hornOscillator3.start(now);
+
+            activeHornOscillators = [hornOscillator1, hornOscillator2, hornOscillator3];
+            activeHornGain = thisGain;
+            
+            voiceSpeak("Horn");
+        }
+
+        function stopHorn() {
+            if (!audioCtx || !hornActive) return;
+            hornActive = false;
+
+            const now = audioCtx.currentTime;
+            if (activeHornGain) {
+                activeHornGain.gain.cancelScheduledValues(now);
+                activeHornGain.gain.linearRampToValueAtTime(0, now + 0.15);
+            }
+
+            const oscsToStop = activeHornOscillators;
+            const gainToDisconnect = activeHornGain;
+
+            setTimeout(() => {
+                if (oscsToStop) {
+                    oscsToStop.forEach(osc => {
+                        try { osc.stop(); osc.disconnect(); } catch(e){}
+                    });
+                }
+                if (gainToDisconnect) {
+                    try { gainToDisconnect.disconnect(); } catch(e){}
+                }
+            }, 200);
+
+            activeHornOscillators = [];
+            activeHornGain = null;
+        }
+
+        function playBrakeAirHiss() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            const bufferSize = audioCtx.sampleRate * 1.2; 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 1000;
+            noiseFilter.Q.value = 1.0;
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.08, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+
+            noiseNode.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            noiseNode.start(now);
+        }
+
+        function startBrakeSqueal() {
+            if (!audioCtx || !brakeSquealGain) return;
+            const now = audioCtx.currentTime;
+
+            if (brakeSquealOsc) return; 
+
+            brakeSquealOsc = audioCtx.createOscillator();
+            brakeSquealOsc.type = 'sine';
+            brakeSquealOsc.frequency.setValueAtTime(3200, now); 
+
+            const squealMod = audioCtx.createOscillator();
+            const squealModGain = audioCtx.createGain();
+            squealMod.frequency.value = 35; 
+            squealModGain.gain.value = 120; 
+
+            squealMod.connect(squealModGain);
+            squealModGain.connect(brakeSquealOsc.frequency);
+
+            brakeSquealOsc.connect(brakeSquealGain);
+
+            squealMod.start(now);
+            brakeSquealOsc.start(now);
+
+            brakeSquealGain.gain.cancelScheduledValues(now);
+            brakeSquealGain.gain.setValueAtTime(0, now);
+            brakeSquealGain.gain.linearRampToValueAtTime(0.015, now + 0.3);
+        }
+
+        function stopBrakeSqueal() {
+            if (!audioCtx || !brakeSquealGain || !brakeSquealOsc) return;
+            const now = audioCtx.currentTime;
+
+            brakeSquealGain.gain.cancelScheduledValues(now);
+            brakeSquealGain.gain.linearRampToValueAtTime(0, now + 0.25);
+
+            setTimeout(() => {
+                if (brakeSquealOsc) {
+                    try {
+                        brakeSquealOsc.stop();
+                        brakeSquealOsc.disconnect();
+                    } catch(e){}
+                    brakeSquealOsc = null;
+                }
+            }, 300);
+        }
+
+        // --- TRACK CLACK SYNTHESIZER ---
+        function triggerTrackImpact(time, intensity) {
+            if (!audioCtx) return;
+
+            const thudOsc = audioCtx.createOscillator();
+            const thudGain = audioCtx.createGain();
+            thudOsc.connect(thudGain);
+            thudGain.connect(audioCtx.destination);
+
+            thudOsc.type = 'triangle';
+            thudOsc.frequency.setValueAtTime(80, time);
+            thudOsc.frequency.exponentialRampToValueAtTime(20, time + 0.14);
+
+            thudGain.gain.setValueAtTime(intensity * 0.35, time);
+            thudGain.gain.exponentialRampToValueAtTime(0.001, time + 0.14);
+
+            thudOsc.start(time);
+            thudOsc.stop(time + 0.16);
+
+            const clickOsc = audioCtx.createOscillator();
+            const clickGain = audioCtx.createGain();
+            clickOsc.connect(clickGain);
+            clickGain.connect(audioCtx.destination);
+
+            clickOsc.type = 'sine';
+            clickOsc.frequency.setValueAtTime(550, time);
+            clickOsc.frequency.exponentialRampToValueAtTime(150, time + 0.05);
+
+            clickGain.gain.setValueAtTime(intensity * 0.11, time);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+            clickOsc.start(time);
+            clickOsc.stop(time + 0.06);
+        }
+
+        function updateTrackClattering() {
+            if (!soundInitialized || !audioCtx || speed < 2 || !gameActive) return;
+
+            const now = audioCtx.currentTime;
+            const interval = 130 / speed;
+
+            if (now - lastClackTime >= interval) {
+                const baseVolume = Math.min(1.0, speed / 130);
+
+                triggerTrackImpact(now, baseVolume);
+                triggerTrackImpact(now + 0.10, baseVolume * 0.80);
+
+                triggerTrackImpact(now + 0.35, baseVolume * 0.65);
+                triggerTrackImpact(now + 0.45, baseVolume * 0.50);
+
+                lastClackTime = now;
+            }
+        }
+
+        function updateEngineWhine() {
+            if (!soundInitialized || !audioCtx || !engineGain || !gameActive) return;
+            const now = audioCtx.currentTime;
+
+            const loadFactor = throttlePercent / 100;
+            const targetBaseFreq = 55 + (speed * 0.8) + (loadFactor * 35);
+            const targetBuzzFreq = 110 + (speed * 1.5) + (loadFactor * 60);
+
+            const filterSweep = 140 + (loadFactor * 320) + (speed * 1.2);
+            
+            if (throttlePercent === 0 && speed > 0) {
+                engineGain.gain.setTargetAtTime(0.005, now, 0.3);
+                const targetAirVolume = 0.005 + (0.018 * (speed / 130));
+                airFlowGain.gain.setTargetAtTime(targetAirVolume, now, 0.4);
+            } else {
+                const targetVolume = 0.01 + (loadFactor * 0.08) + (speed * 0.0003);
+                engineGain.gain.setTargetAtTime(targetVolume, now, 0.25);
+                airFlowGain.gain.setTargetAtTime(0.004, now, 0.35);
+            }
+
+            engineBaseOsc.frequency.setTargetAtTime(targetBaseFreq, now, 0.15);
+            engineDizzleBuzz.frequency.setTargetAtTime(targetBuzzFreq, now, 0.15);
+            engineFilter.frequency.setTargetAtTime(filterSweep, now, 0.2);
+        }
+
+        // --- UPGRADED ACCESSIBILITY STATION BEACON ---
+        // Dynamically changes pitch and frequency as you approach the platform edge
+        function updateStationAudioBeacon() {
+            if (!soundInitialized || !audioCtx || !gameActive) return;
+            const now = audioCtx.currentTime;
+
+            const targetStation = activeStationsList[currentStationIndex];
+            if (!targetStation) return;
+
+            const activeTargetDist = targetStation.dist - distanceTravelled;
+
+            // Beacon activates within the final 3 kilometers
+            if (activeTargetDist <= 3.0 && activeTargetDist > 0.001) {
+                // Interval gets dynamically shorter as you approach (down to 0.15s)
+                const pulseInterval = Math.max(0.15, activeTargetDist * 0.4); 
+
+                if (now - lastBeaconTime >= pulseInterval) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.type = 'sine';
+                    
+                    // Pitch shifts up to create a physical "Parking Sensor" effect
+                    let beaconPitch = 880; 
+                    if (activeTargetDist < 1.0) {
+                        beaconPitch = 1200 - (activeTargetDist * 320); 
+                    }
+                    if (activeTargetDist < 0.15) {
+                        beaconPitch = 1400; // Urgent terminal high-pitch beep
+                    }
+
+                    osc.frequency.setValueAtTime(beaconPitch, now); 
+
+                    const volume = activeTargetDist < 0.3 ? 0.25 : 0.12;
+                    gain.gain.setValueAtTime(volume, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                    osc.start(now);
+                    osc.stop(now + 0.10);
+
+                    lastBeaconTime = now;
+                }
+            }
+        }
+
+        function playWarningBeep() {
+            if (!soundInitialized || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc2.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(220, now);
+            osc2.frequency.setValueAtTime(225, now);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 1.5);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 1.5);
+            osc2.stop(now + 1.5);
+        }
+
+        // --- SCENERY ANIMATIONS ---
+        function createInitialScenery() {
+            sceneryElements.innerHTML = '';
+            poles = [];
+            for(let i=0; i<3; i++) {
+                spawnPole(window.innerWidth * (i / 3));
+            }
+        }
+
+        function spawnPole(initialX) {
+            const poleEl = document.createElement('div');
+            poleEl.className = "absolute bottom-8 w-1 h-36 bg-slate-500/80 transition-transform pointer-events-none";
+            
+            const bracket = document.createElement('div');
+            bracket.className = "absolute top-6 left-0 w-8 h-1 bg-slate-400";
+            poleEl.appendChild(bracket);
+
+            sceneryElements.appendChild(poleEl);
+            
+            poles.push({
+                element: poleEl,
+                x: initialX
+            });
+        }
+
+        function updateSceneryAnimation() {
+            if (!gameActive) return;
+            const scaleFactor = speed * 0.25; 
+            
+            poles.forEach((pole) => {
+                pole.x -= scaleFactor;
+                if (pole.x < -50) {
+                    pole.x = window.innerWidth + 20;
+                }
+                pole.element.style.transform = `translateX(${pole.x}px)`;
+            });
+
+            sceneryAnimationId = requestAnimationFrame(updateSceneryAnimation);
+        }
+
+        // --- MISSION LOST SEQUENCE ---
+        function triggerGameOver() {
+            gameActive = false;
+            emergencyActive = true;
+            throttlePercent = 0;
+            throttleSlider.value = 0;
+            stopBrakeSqueal();
+            
+            const targetStation = activeStationsList[currentStationIndex];
+            
+            signalState.innerText = "SIGNAL DANGER: LICENSE REVOKED";
+            signalState.className = "font-bold text-red-500 animate-pulse";
+            tractionDisplay.innerText = "Traction Status: EMERGENCY BRAKE APPLIED";
+            tractionDisplay.className = "text-xs text-red-400 font-bold";
+
+            if (engineGain) {
+                engineGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            }
+            if (airFlowGain) {
+                airFlowGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            }
+
+            playWarningBeep();
+
+            const failureSpeech = `Game Over! You overshot the intermediate station of ${targetStation.name} at speed without stopping. Signal passed at danger! Your pilot license has been revoked.`;
+            voiceSpeak(failureSpeech);
+
+            gameOverTitle.innerText = "Signal Violation: Station Overshoot!";
+            gameOverMessage.innerText = `You crossed the scheduled platform at ${targetStation.name} at ${Math.round(speed)} km/h without stopping. High-speed signal violation.`;
+            gameOverOverlay.classList.remove('hidden');
+
+            restartGameBtn.focus();
+        }
+
+        // --- SIMULATION PHYSICS ENGINE ---
+        function runSimulationTick() {
+            if (cabinScreen.classList.contains('hidden') || !gameActive) return;
+
+            // Handle Braking vs Throttle
+            if (emergencyActive) {
+                throttlePercent = 0;
+                throttleSlider.value = 0;
+                throttleSlider.setAttribute('aria-valuenow', '0');
+                speed -= 2.5; 
+                if (speed < 0) speed = 0;
+                stopBrakeSqueal();
+            } else if (brakeActive) {
+                throttlePercent = 0;
+                throttleSlider.value = 0;
+                throttleSlider.setAttribute('aria-valuenow', '0');
+                speed -= 0.8; 
+                if (speed < 0) speed = 0;
+
+                if (speed > 2 && speed < 35) {
+                    startBrakeSqueal();
+                } else {
+                    stopBrakeSqueal();
+                }
+            } else {
+                stopBrakeSqueal();
+                const maxAllowedSpeed = trainDatabase[selectedTrainCode].maxSpeed;
+                targetSpeed = (throttlePercent / 100) * maxAllowedSpeed;
+
+                if (speed < targetSpeed) {
+                    speed += 0.25; 
+                    if (speed > targetSpeed) speed = targetSpeed;
+                } else if (speed > targetSpeed) {
+                    speed -= 0.15; 
+                    if (speed < targetSpeed) speed = targetSpeed;
+                }
+            }
+
+            // Continuous distance tracking
+            const tickTimeHours = 0.1 / 3600; 
+            const actualDistanceCovered = speed * tickTimeHours * scaleTimeMultiplier;
+            distanceTravelled += actualDistanceCovered;
+
+            const targetStation = activeStationsList[currentStationIndex];
+            
+            if (targetStation) {
+                const distToTarget = targetStation.dist - distanceTravelled;
+                const isFinalDestination = (currentStationIndex === activeStationsList.length - 1);
+
+                // Check approaching proximity
+                if (distToTarget <= 0.5 && !atIntermediateStationHalt) {
+                    if (speed > 15) {
+                        voiceSpeak(`Warning: Approaching platform ${targetStation.name}. Speed is ${Math.round(speed)}. Apply brakes immediately!`);
+                    } else if (speed === 0) {
+                        atIntermediateStationHalt = true;
+                        departureAuthorized = false;
+                        
+                        scorePoints += 100;
+                        pointsDisplay.innerText = scorePoints;
+
+                        if (isFinalDestination) {
+                            gameActive = false;
+                            voiceSpeak(`Train stopped successfully at final destination ${targetStation.name}. One hundred points awarded! Total journey completed! Your final score is ${scorePoints} points.`);
+                        } else {
+                            voiceSpeak(`Train stopped successfully at platform ${targetStation.name}. One hundred points awarded! Boarding passengers. Please standby.`);
+                            
+                            setTimeout(() => {
+                                departureAuthorized = true;
+                                currentStationIndex++;
+                                atIntermediateStationHalt = false;
+                                voiceSpeak(`Passenger boarding complete. Departure signal is green. You may apply throttle to depart towards ${activeStationsList[currentStationIndex].name}.`);
+                            }, 5000);
+                        }
+                    }
+                }
+
+                // Overshoot detection
+                if (distToTarget <= 0 && !isFinalDestination) {
+                    if (!atIntermediateStationHalt && speed > 0) {
+                        triggerGameOver();
+                        return; 
+                    }
+                }
+            }
+
+            // Update UI
+            let targetSignalText = "PROCEED (GREEN)";
+            let targetSignalClass = "font-bold text-emerald-400";
+            let targetTractionText = `Traction Status: Pulling (${throttlePercent}%)`;
+            let targetTractionClass = "text-xs text-emerald-400";
+
+            if (speed === 0) {
+                targetSignalText = "STANDBY (RED/YELLOW)";
+                targetSignalClass = "font-bold text-amber-500";
+                targetTractionText = "Traction Status: Neutral / Standing";
+                targetTractionClass = "text-xs text-slate-500";
+            } else if (emergencyActive) {
+                targetSignalText = "EMERGENCY BRAKE APPLIED";
+                targetSignalClass = "font-bold text-red-500 animate-pulse";
+                targetTractionText = "Traction Status: Emergency Braking";
+                targetTractionClass = "text-xs text-red-400 font-bold";
+            } else if (brakeActive) {
+                targetSignalText = "SERVICE BRAKE ACTIVE";
+                targetSignalClass = "font-bold text-amber-500";
+                targetTractionText = "Traction Status: Pneumatic Braking";
+                targetTractionClass = "text-xs text-amber-400 font-bold";
+            }
+
+            if (targetSignalText !== lastRenderedSignal) {
+                signalState.innerText = targetSignalText;
+                signalState.className = targetSignalClass;
+                lastRenderedSignal = targetSignalText;
+            }
+
+            if (targetTractionText !== lastRenderedTraction) {
+                tractionDisplay.innerText = targetTractionText;
+                tractionDisplay.className = targetTractionClass;
+                lastRenderedTraction = targetTractionText;
+            }
+
+            const roundedSpeed = Math.round(speed);
+            if (roundedSpeed !== lastRenderedSpeed) {
+                speedDisplay.innerHTML = `${roundedSpeed} <span class="text-lg font-normal text-slate-500" aria-hidden="true">km/h</span>`;
+                
+                const maxAllowedSpeed = trainDatabase[selectedTrainCode].maxSpeed;
+                const barWidth = (roundedSpeed / maxAllowedSpeed) * 100;
+                speedBar.style.width = `${barWidth}%`;
+                
+                lastRenderedSpeed = roundedSpeed;
+            }
+
+            updateTrackClattering();
+            updateEngineWhine();
+            updateStationAudioBeacon();
+
+            setTimeout(runSimulationTick, 100);
+        }
+
+        // --- 5-SECOND STATS ANNOUNCER ---
+        function startPeriodicAnnouncements() {
+            if (announcerInterval) clearInterval(announcerInterval);
+
+            announcerInterval = setInterval(() => {
+                if (cabinScreen.classList.contains('hidden') || !gameActive) return;
+
+                const roundedSpeed = Math.round(speed);
+                const targetStation = activeStationsList[currentStationIndex];
+                if (!targetStation) return;
+
+                const distToTarget = targetStation.dist - distanceTravelled;
+                let announcementMessage = "";
+
+                if (distToTarget > 0.05) {
+                    announcementMessage = `Speed ${roundedSpeed} kilometers per hour. ${distToTarget.toFixed(1)} kilometers to next station ${targetStation.name}.`;
+                } else if (distToTarget <= 0.05 && distToTarget > 0 && speed > 0) {
+                    announcementMessage = `Entering intermediate platform at speed ${roundedSpeed}. Stop now!`;
+                } else if (atIntermediateStationHalt && !departureAuthorized) {
+                    announcementMessage = `Boarding passenger coaches at ${targetStation.name}. Standing still.`;
+                } else {
+                    announcementMessage = `Speed ${roundedSpeed} kilometers per hour. Proceeding to destination.`;
+                }
+
+                voiceSpeak(announcementMessage);
+            }, 5000);
+        }
+
+
+        // --- SELECTION DETAILS DYNAMIC UPDATE ---
+        function updateSelectionDetails() {
+            const code = trainSelect.value;
+            const data = trainDatabase[code];
+            if (data) {
+                trainFullName.innerText = data.name;
+                locoModel.innerText = data.loco;
+            }
+        }
+
+        trainSelect.addEventListener('change', updateSelectionDetails);
+
+        // --- TRANSITIONS & ACTIONS ---
+        startCabinBtn.addEventListener('click', () => {
+            selectedTrainCode = trainSelect.value;
+            const trainData = trainDatabase[selectedTrainCode];
+
+            updateSelectedVoiceReference();
+
+            activeTrainNumber.innerText = selectedTrainCode;
+            activeTrainName.innerText = trainData.name;
+            diagnosticLoco.innerText = trainData.loco.split(' ')[0]; 
+            diagnosticRoute.innerText = trainData.route;
+
+            activeStationsList = trainData.stations;
+            currentStationIndex = 0;
+            distanceTravelled = 0;
+            atIntermediateStationHalt = false;
+            departureAuthorized = true;
+            gameActive = true;
+            scorePoints = 0;
+            pointsDisplay.innerText = "0";
+
+            gameOverOverlay.classList.add('hidden');
+
+            speed = 0;
+            lastRenderedSpeed = -1;
+            lastRenderedTraction = "";
+            lastRenderedSignal = "";
+            lastClackTime = 0;
+            lastBeaconTime = 0;
+
+            throttlePercent = 0;
+            throttleSlider.value = 0;
+            throttleSlider.setAttribute('aria-valuenow', '0');
+            throttleSlider.setAttribute('aria-valuetext', '0 percent power');
+            throttleValueDisplay.innerText = "0 %";
+            emergencyActive = false;
+            brakeActive = false;
+
+            selectionScreen.classList.add('hidden');
+            cabinScreen.classList.remove('hidden');
+
+            cabinScreen.focus();
+
+            voiceSpeak(`Entered pilot cabin for Train ${selectedTrainCode}. Engine started. Co-pilot speech configured. Ready for departure.`);
+
+            initAudio();
+            createInitialScenery();
+            if (sceneryAnimationId) cancelAnimationFrame(sceneryAnimationId);
+            updateSceneryAnimation();
+            runSimulationTick();
+            
+            startPeriodicAnnouncements();
+        });
+
+        exitCabinBtn.addEventListener('click', () => {
+            gameActive = false;
+            cabinScreen.classList.add('hidden');
+            selectionScreen.classList.remove('hidden');
+            gameOverOverlay.classList.add('hidden');
+            stopBrakeSqueal();
+            
+            if (announcerInterval) clearInterval(announcerInterval);
+
+            trainSelect.focus();
+            voiceSpeak("Returned to selection portal.");
+
+            if (sceneryAnimationId) cancelAnimationFrame(sceneryAnimationId);
+
+            if (engineGain) {
+                engineGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            }
+            if (airFlowGain) {
+                airFlowGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            }
+        });
+
+        restartGameBtn.addEventListener('click', () => {
+            gameOverOverlay.classList.add('hidden');
+            cabinScreen.classList.add('hidden');
+            selectionScreen.classList.remove('hidden');
+            trainSelect.focus();
+            voiceSpeak("Returned to selector menu.");
+        });
+
+        throttleSlider.addEventListener('input', (e) => {
+            if (emergencyActive || (!departureAuthorized && atIntermediateStationHalt) || !gameActive) {
+                throttleSlider.value = 0;
+                return; 
+            }
+            if (brakeActive) {
+                brakeActive = false;
+                brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+                playBrakeAirHiss();
+            }
+            throttlePercent = parseInt(e.target.value);
+            throttleValueDisplay.innerText = `${throttlePercent} %`;
+            
+            throttleSlider.setAttribute('aria-valuenow', throttlePercent);
+            throttleSlider.setAttribute('aria-valuetext', `${throttlePercent} percent power`);
+        });
+
+        throttleSlider.addEventListener('change', () => {
+            if (!departureAuthorized && atIntermediateStationHalt) {
+                voiceSpeak("Cannot apply throttle. Passengers boarding.");
+            } else if (gameActive) {
+                voiceSpeak(`Throttle ${throttlePercent} percent`);
+            }
+        });
+
+        coastBtn.addEventListener('click', () => {
+            if (emergencyActive || !gameActive) return;
+            if (brakeActive) {
+                brakeActive = false;
+                brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+                playBrakeAirHiss();
+            }
+            throttlePercent = 0;
+            throttleSlider.value = 0;
+            throttleSlider.setAttribute('aria-valuenow', '0');
+            throttleValueDisplay.innerText = "0 %";
+            voiceSpeak("Coasting");
+        });
+
+        brakeBtn.addEventListener('click', () => {
+            if (emergencyActive || !gameActive) return;
+            if (!brakeActive) {
+                brakeActive = true;
+                throttlePercent = 0;
+                throttleSlider.value = 0;
+                throttleValueDisplay.innerText = "0 %";
+                brakeBtn.classList.add('bg-amber-600/60', 'text-amber-200');
+                playBrakeAirHiss();
+                voiceSpeak("Brakes applied");
+            } else {
+                brakeActive = false;
+                brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+                playBrakeAirHiss();
+                voiceSpeak("Brakes released");
+            }
+        });
+
+        quickHornBtn.addEventListener('mousedown', playHorn);
+        quickHornBtn.addEventListener('mouseup', stopHorn);
+        quickHornBtn.addEventListener('mouseleave', stopHorn);
+
+        quickHornBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playHorn();
+        }, {passive: false});
+        quickHornBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopHorn();
+        });
+
+        maxBtn.addEventListener('click', () => {
+            if (emergencyActive || (!departureAuthorized && atIntermediateStationHalt) || !gameActive) return;
+            if (brakeActive) {
+                brakeActive = false;
+                brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+                playBrakeAirHiss();
+            }
+            throttlePercent = 100;
+            throttleSlider.value = 100;
+            throttleSlider.setAttribute('aria-valuenow', '100');
+            throttleValueDisplay.innerText = "100 %";
+            voiceSpeak("Maximum throttle");
+        });
+
+        emergencyBrakeBtn.addEventListener('click', () => {
+            if (!gameActive) return;
+            emergencyActive = true;
+            brakeActive = false;
+            brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+            throttlePercent = 0;
+            throttleSlider.value = 0;
+            throttleValueDisplay.innerText = "0 %";
+
+            voiceSpeak("Emergency Brake!");
+
+            emergencyBrakeBtn.classList.add('bg-red-800');
+            setTimeout(() => {
+                emergencyBrakeBtn.classList.remove('bg-red-800');
+            }, 300);
+
+            setTimeout(() => {
+                if (speed === 0 && gameActive) {
+                    emergencyActive = false;
+                    voiceSpeak("Brakes released.");
+                }
+            }, 4000);
+        });
+
+        // --- ROBUST KEYBOARD SHORTCUTS ---
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.repeat) return;
+            
+            const key = e.key.toLowerCase();
+            keysPressed[key] = true;
+
+            if (e.code === 'Space' || key === 'h') {
+                e.preventDefault();
+                playHorn();
+            } else if (key === 'b') {
+                e.preventDefault();
+                brakeBtn.click();
+            } else if (key === 'e') {
+                e.preventDefault();
+                emergencyBrakeBtn.click();
+            } else if (key === 's' || e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (brakeActive) return;
+                let newVal = Math.max(0, throttlePercent - 10);
+                throttleSlider.value = newVal;
+                throttlePercent = newVal;
+                throttleValueDisplay.innerText = `${throttlePercent} %`;
+                voiceSpeak(`Throttle ${throttlePercent}`);
+            } else if (key === 'w' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (emergencyActive || (!departureAuthorized && atIntermediateStationHalt)) return;
+                if (brakeActive) {
+                    brakeActive = false;
+                    brakeBtn.classList.remove('bg-amber-600/60', 'text-amber-200');
+                    playBrakeAirHiss();
+                }
+                let newVal = Math.min(100, throttlePercent + 10);
+                throttleSlider.value = newVal;
+                throttlePercent = newVal;
+                throttleValueDisplay.innerText = `${throttlePercent} %`;
+                voiceSpeak(`Throttle ${throttlePercent}`);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            delete keysPressed[key];
+
+            if (e.code === 'Space' || key === 'h') {
+                e.preventDefault();
+                stopHorn();
+            }
+        });
+
+        hornBtn.addEventListener('mousedown', playHorn);
+        hornBtn.addEventListener('mouseup', stopHorn);
+        hornBtn.addEventListener('mouseleave', stopHorn);
+
+        hornBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playHorn();
+        }, {passive: false});
+        hornBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopHorn();
+        });
+
+        // Initialize Landing Details
+        updateSelectionDetails();
     </script>
 </body>
 </html>
+
+```
