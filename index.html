@@ -269,4 +269,470 @@
                         
                         <div class="flex flex-col gap-4 mt-6">
                             <a href="https://www.youtube.com/@pbtechfacts" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 text-red-600 dark:text-red-400 font-bold hover:underline w-max focus-visible:outline">
-                                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4
+                                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                                PB Tech Facts (@pbtechfacts) on YouTube
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 shadow-inner mt-auto border-t border-gray-200 dark:border-gray-700 p-6 text-center" role="contentinfo">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-lg font-semibold text-gray-600 dark:text-gray-300">
+                &copy; <span id="year"></span> Universal Accessibility Reader. All Rights Reserved.
+            </p>
+            <div class="flex flex-wrap justify-center gap-6 text-lg font-bold">
+                <a href="https://wa.me/917396091418?text=Hi%20Prasad,%20Feedback%20for%20Universal%20Accessibility%20Document%20Reader:" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 hover:underline flex items-center gap-2">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.711.848 3.146.848 3.182 0 5.767-2.585 5.767-5.766 0-3.18-2.585-5.77-5.764-5.77zM12.031 0c6.627 0 12 5.373 12 12s-5.373 12-12 12c-2.051 0-3.984-.51-5.672-1.411l-6.328 1.662 1.688-6.17c-1.026-1.748-1.688-3.791-1.688-5.981 0-6.627 5.373-12 12-12z"/></svg>
+                    WhatsApp Feedback
+                </a>
+                <a href="mailto:pbtechfacts@gmail.com" class="text-primary dark:text-indigo-400 hover:underline flex items-center gap-2">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.104 10-8.104v11.817h-20z"/></svg>
+                    Email Support
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        /**
+         * Accessible Audio Feedback System
+         */
+        const AudioEngine = {
+            ctx: null,
+            enabled: true,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playTone(freq, type, duration, vol=0.1) {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            playSuccess() {
+                this.playTone(440, 'sine', 0.1);
+                setTimeout(() => this.playTone(554, 'sine', 0.2), 100);
+                setTimeout(() => this.playTone(659, 'sine', 0.4), 200);
+            },
+            playError() {
+                this.playTone(200, 'sawtooth', 0.3, 0.2);
+                setTimeout(() => this.playTone(150, 'sawtooth', 0.4, 0.2), 200);
+            },
+            playNav() { this.playTone(600, 'triangle', 0.1, 0.05); },
+            playToggle() { this.playTone(300, 'sine', 0.2, 0.1); }
+        };
+
+        /**
+         * Core Application Logic
+         */
+        const app = {
+            state: {
+                isDark: false,
+                fontSize: 18,
+                activeTab: 'dashboard',
+                files: {
+                    documents: { type: null, data: null, name: "", pdfDoc: null, currentImg: null },
+                    spreadsheets: { type: null, data: null, name: "" },
+                    presentations: { type: null, data: null, name: "", slides: [] }
+                },
+                pagination: { current: 1, total: 1 }
+            },
+
+            elements: {
+                announcer: document.getElementById('live-announcer'),
+                panels: document.querySelectorAll('.tab-panel'),
+                tabs: document.querySelectorAll('.tab-btn'),
+            },
+
+            announce(message) {
+                this.elements.announcer.textContent = '';
+                setTimeout(() => { this.elements.announcer.textContent = message; }, 50);
+            },
+
+            toggleTheme() {
+                this.state.isDark = !this.state.isDark;
+                document.documentElement.classList.toggle('dark', this.state.isDark);
+                AudioEngine.playToggle();
+                this.announce(this.state.isDark ? "Dark mode enabled" : "Light mode enabled");
+            },
+
+            changeFontSize(step) {
+                this.state.fontSize = Math.max(14, Math.min(32, this.state.fontSize + (step * 2)));
+                document.querySelectorAll('.doc-content').forEach(el => el.style.fontSize = `${this.state.fontSize}px`);
+                AudioEngine.playToggle();
+                this.announce(`Font size changed to ${this.state.fontSize} pixels`);
+            },
+
+            toggleSound() {
+                AudioEngine.enabled = !AudioEngine.enabled;
+                const btn = document.getElementById('btn-sound');
+                btn.innerHTML = AudioEngine.enabled ? '🔊 Sounds: ON' : '🔇 Sounds: OFF';
+                btn.setAttribute('aria-pressed', AudioEngine.enabled.toString());
+                if(AudioEngine.enabled) AudioEngine.playToggle();
+                this.announce(`Sound effects ${AudioEngine.enabled ? 'enabled' : 'disabled'}`);
+            },
+
+            switchTab(tabId) {
+                this.state.activeTab = tabId;
+                
+                // Update UI visually and semantically
+                this.elements.tabs.forEach(tab => {
+                    const isSelected = tab.id === `tab-${tabId}`;
+                    tab.setAttribute('aria-selected', isSelected.toString());
+                });
+
+                this.elements.panels.forEach(panel => {
+                    if (panel.id === `panel-${tabId}`) {
+                        panel.classList.remove('hidden');
+                        panel.classList.add('flex');
+                    } else {
+                        panel.classList.add('hidden');
+                        panel.classList.remove('flex');
+                    }
+                });
+
+                AudioEngine.playNav();
+                this.announce(`${tabId.charAt(0).toUpperCase() + tabId.slice(1)} tab selected.`);
+                
+                // Set focus to the active panel for screen readers
+                document.getElementById(`panel-${tabId}`).focus();
+            },
+
+            async handleFile(event, moduleType) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                AudioEngine.init();
+                const panel = document.getElementById(`panel-${moduleType}`);
+                const statusEl = panel.querySelector('.upload-status');
+                const ext = file.name.split('.').pop().toLowerCase();
+                
+                statusEl.textContent = "Processing file, please wait...";
+                this.announce("Processing file, please wait.");
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    this.state.files[moduleType].name = file.name;
+                    this.state.files[moduleType].type = ext;
+                    
+                    const viewerZone = panel.querySelector('.viewer-zone');
+                    const uploadZone = panel.querySelector('.upload-zone');
+                    const contentEl = panel.querySelector('.doc-content');
+                    
+                    contentEl.innerHTML = ''; // reset
+                    panel.querySelector('.file-name').textContent = file.name;
+
+                    if (moduleType === 'documents') {
+                        await this.parseDocument(arrayBuffer, file, ext, panel, contentEl);
+                    } else if (moduleType === 'spreadsheets') {
+                        await this.parseSpreadsheet(arrayBuffer, contentEl);
+                    } else if (moduleType === 'presentations') {
+                        await this.parsePresentation(arrayBuffer, panel, contentEl);
+                    }
+
+                    uploadZone.classList.add('hidden');
+                    viewerZone.classList.remove('hidden');
+                    viewerZone.classList.add('flex');
+                    
+                    AudioEngine.playSuccess();
+                    this.announce(`${file.name} loaded successfully. Press tab to explore content.`);
+                    contentEl.focus();
+
+                } catch (error) {
+                    console.error(error);
+                    statusEl.textContent = `Error: ${error.message}`;
+                    this.announce(`Error processing file: ${error.message}`);
+                    AudioEngine.playError();
+                }
+            },
+
+            // =========================
+            // Document & OCR Parser
+            // =========================
+            async parseDocument(buffer, file, ext, panel, contentEl) {
+                const pagination = panel.querySelector('.pagination');
+                const btnOcr = panel.querySelector('.btn-ocr');
+                pagination.classList.add('hidden');
+                btnOcr.classList.add('hidden');
+
+                if (ext === 'pdf') {
+                    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+                    this.state.files.documents.pdfDoc = await loadingTask.promise;
+                    this.state.pagination.total = this.state.files.documents.pdfDoc.numPages;
+                    this.state.pagination.current = 1;
+                    pagination.classList.remove('hidden');
+                    await this.renderPDFPage(panel, contentEl);
+                } 
+                else if (ext === 'docx') {
+                    const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+                    contentEl.innerHTML = `<div class="p-4 bg-white dark:bg-gray-800 rounded">${result.value}</div>`;
+                    
+                    // A11y enhancements for mammoth tables
+                    contentEl.querySelectorAll('table').forEach(table => {
+                        table.classList.add('a11y-table');
+                        table.setAttribute('role', 'table');
+                        table.setAttribute('tabindex', '0');
+                    });
+                }
+                else if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
+                    // It's an image. Show OCR button.
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.state.files.documents.currentImg = e.target.result;
+                        contentEl.innerHTML = `<img src="${e.target.result}" alt="Uploaded image document" class="max-w-full rounded border-2 border-gray-300">
+                                               <div id="ocr-result" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hidden border-l-4 border-secondary" aria-live="polite"></div>`;
+                        btnOcr.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    throw new Error("Unsupported document format.");
+                }
+            },
+
+            async renderPDFPage(panel, contentEl) {
+                const pdf = this.state.files.documents.pdfDoc;
+                const page = await pdf.getPage(this.state.pagination.current);
+                const viewport = page.getViewport({ scale: 1.5 });
+
+                contentEl.innerHTML = ''; 
+                
+                // Visual Canvas Container
+                const canvasContainer = document.createElement('div');
+                canvasContainer.setAttribute('aria-hidden', 'true');
+                canvasContainer.className = "flex justify-center mb-6";
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                canvas.className = "max-w-full h-auto border border-gray-300 dark:border-gray-600 shadow-md";
+                
+                canvasContainer.appendChild(canvas);
+                contentEl.appendChild(canvasContainer);
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                // A11y Text Layer
+                const textContent = await page.getTextContent();
+                const a11yContainer = document.createElement('div');
+                a11yContainer.className = "sr-only"; 
+                
+                let lastY = -1;
+                let paragraph = document.createElement('p');
+
+                textContent.items.forEach(item => {
+                    if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 12) {
+                        a11yContainer.appendChild(paragraph);
+                        paragraph = document.createElement('p');
+                    }
+                    paragraph.textContent += item.str + ' ';
+                    lastY = item.transform[5];
+                });
+                a11yContainer.appendChild(paragraph);
+                contentEl.appendChild(a11yContainer);
+
+                this.updatePaginationUI('documents', panel);
+                this.announce(`Showing Page ${this.state.pagination.current} of ${this.state.pagination.total}.`);
+            },
+
+            async runOCR() {
+                const imgData = this.state.files.documents.currentImg;
+                if (!imgData) return;
+
+                const ocrResultDiv = document.getElementById('ocr-result');
+                ocrResultDiv.classList.remove('hidden');
+                ocrResultDiv.innerHTML = `<p class="font-bold text-primary animate-pulse">Running OCR Engine... Please wait...</p>`;
+                this.announce("Running OCR. Extracting text from image, please wait.");
+
+                try {
+                    const result = await Tesseract.recognize(imgData, 'eng');
+                    const text = result.data.text;
+                    
+                    ocrResultDiv.innerHTML = `<h3 class="text-2xl font-bold mb-2">Extracted Text:</h3>
+                                              <p class="whitespace-pre-wrap">${text || "No readable text found."}</p>`;
+                    this.announce("OCR complete. Text extracted successfully.");
+                    AudioEngine.playSuccess();
+                } catch (e) {
+                    ocrResultDiv.innerHTML = `<p class="text-red-600 font-bold">OCR Failed: ${e.message}</p>`;
+                    this.announce("OCR failed.");
+                }
+            },
+
+            // =========================
+            // Spreadsheet Parser
+            // =========================
+            async parseSpreadsheet(buffer, contentEl) {
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const htmlStr = XLSX.utils.sheet_to_html(worksheet);
+                
+                contentEl.innerHTML = htmlStr;
+                const table = contentEl.querySelector('table');
+                
+                if (table) {
+                    table.classList.add('a11y-table');
+                    table.setAttribute('role', 'grid');
+                    table.setAttribute('tabindex', '0');
+                    table.setAttribute('aria-label', `Data for sheet ${sheetName}`);
+                    
+                    const firstRow = table.querySelector('tr');
+                    if (firstRow) {
+                        Array.from(firstRow.children).forEach(cell => {
+                            const th = document.createElement('th');
+                            th.innerHTML = cell.innerHTML;
+                            th.setAttribute('scope', 'col');
+                            cell.replaceWith(th);
+                        });
+                    }
+                }
+            },
+
+            // =========================
+            // Presentation Parser
+            // =========================
+            async parsePresentation(buffer, panel, contentEl) {
+                const zip = await JSZip.loadAsync(buffer);
+                const slides = [];
+                let slideIndex = 1;
+
+                while (zip.file(`ppt/slides/slide${slideIndex}.xml`)) {
+                    let slideXml = await zip.file(`ppt/slides/slide${slideIndex}.xml`).async("string");
+                    let relsFile = zip.file(`ppt/slides/_rels/slide${slideIndex}.xml.rels`);
+                    let relsXml = relsFile ? await relsFile.async("string") : null;
+
+                    let slideData = { text: [], images: [] };
+
+                    const textRegex = /<a:t>([\s\S]*?)<\/a:t>/g;
+                    let match;
+                    while ((match = textRegex.exec(slideXml)) !== null) {
+                        if (match[1].trim()) slideData.text.push(match[1].trim());
+                    }
+
+                    if (relsXml) {
+                        const relRegex = /Id="([^"]+)"\s+Type="[^"]+image"\s+Target="([^"]+)"/g;
+                        let relMatch;
+                        while ((relMatch = relRegex.exec(relsXml)) !== null) {
+                            let target = relMatch[2].replace('../', 'ppt/');
+                            if (zip.file(target)) {
+                                let b64 = await zip.file(target).async("base64");
+                                let e = target.split('.').pop();
+                                slideData.images.push(`data:image/${e};base64,${b64}`);
+                            }
+                        }
+                    }
+                    slides.push(slideData);
+                    slideIndex++;
+                }
+
+                if (slides.length === 0) throw new Error("No slides found.");
+
+                this.state.files.presentations.slides = slides;
+                this.state.pagination.total = slides.length;
+                this.state.pagination.current = 1;
+                
+                panel.querySelector('.pagination').classList.remove('hidden');
+                this.renderPPTXSlide(panel, contentEl);
+            },
+
+            renderPPTXSlide(panel, contentEl) {
+                const slide = this.state.files.presentations.slides[this.state.pagination.current - 1];
+                contentEl.innerHTML = '';
+                
+                const slideWrapper = document.createElement('section');
+                slideWrapper.className = "slide-container";
+                slideWrapper.setAttribute('aria-label', `Slide ${this.state.pagination.current}`);
+                slideWrapper.setAttribute('tabindex', '0');
+
+                slide.text.forEach(txt => {
+                    const p = document.createElement('p');
+                    p.className = "text-2xl font-bold mb-4";
+                    p.textContent = txt;
+                    slideWrapper.appendChild(p);
+                });
+
+                slide.images.forEach((imgSrc, idx) => {
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.alt = `Graphic element ${idx + 1} on slide`;
+                    img.className = "mx-auto block my-6 max-h-[50vh] object-contain rounded";
+                    slideWrapper.appendChild(img);
+                });
+
+                if (slide.text.length === 0 && slide.images.length === 0) {
+                    slideWrapper.innerHTML = "<p class='italic'>[Blank Slide]</p>";
+                }
+
+                contentEl.appendChild(slideWrapper);
+                this.updatePaginationUI('presentations', panel);
+                slideWrapper.focus();
+                this.announce(`Slide ${this.state.pagination.current} of ${this.state.pagination.total} loaded.`);
+            },
+
+            // =========================
+            // Pagination Logic
+            // =========================
+            changePage(delta) {
+                const newPage = this.state.pagination.current + delta;
+                if (newPage >= 1 && newPage <= this.state.pagination.total) {
+                    this.state.pagination.current = newPage;
+                    AudioEngine.playNav();
+                    
+                    const panel = document.getElementById(`panel-${this.state.activeTab}`);
+                    const contentEl = panel.querySelector('.doc-content');
+                    
+                    if (this.state.activeTab === 'documents') {
+                        this.renderPDFPage(panel, contentEl);
+                    } else if (this.state.activeTab === 'presentations') {
+                        this.renderPPTXSlide(panel, contentEl);
+                    }
+                }
+            },
+
+            updatePaginationUI(moduleType, panel) {
+                const indicator = panel.querySelector('.page-indicator');
+                const btns = panel.querySelectorAll('.pagination button');
+                
+                indicator.textContent = `Page ${this.state.pagination.current} of ${this.state.pagination.total}`;
+                btns[0].disabled = this.state.pagination.current === 1;
+                btns[1].disabled = this.state.pagination.current === this.state.pagination.total;
+            }
+        };
+
+        // Initialize Focus on Dashboard
+        document.getElementById('panel-dashboard').focus();
+    </script>
+    
+    <!-- Default Statcounter code for A simple utility tool
+    https://pbtechfacts.github.io/pb -->
+    <script type="text/javascript">
+    var sc_project=13336292; 
+    var sc_invisible=1; 
+    var sc_security="a24b4c16"; 
+    </script>
+    <script type="text/javascript"
+    src="https://www.statcounter.com/counter/counter.js" async></script>
+    <noscript><div class="statcounter"><a title="hit counter"
+    href="https://statcounter.com/" target="_blank"><img class="statcounter"
+    src="https://c.statcounter.com/13336292/0/a24b4c16/1/" alt="hit counter"
+    referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
+    <!-- End of Statcounter Code -->
+</body>
+</html>
+
+
