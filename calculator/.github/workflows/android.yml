@@ -27,13 +27,13 @@ jobs:
       - name: Create Android project
         run: briefcase create android
 
-      - name: Build Android APK
-        run: briefcase build android -u
+      - name: Build and package release APK
+        run: briefcase package android -p apk -u
 
-      - name: Package APK
+      - name: Collect APK
         run: |
-          mkdir -p ../apk-output
-          find build -type f -name '*.apk' -exec cp {} ../apk-output/accessible-calculator.apk \;
+          mkdir -p apk-output
+          find dist -type f -name '*.apk' -exec cp {} apk-output/accessible-calculator.apk \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
