@@ -1,0 +1,22 @@
+[build-system]
+requires = ["briefcase>=0.4.4,<0.5"]
+build-backend = "briefcase.build"
+
+[tool.briefcase]
+project_name = "Accessible Calculator"
+bundle = "com.pbtechfacts"
+version = "0.1.0"
+url = "https://github.com/pbtechfacts/pb"
+license = "MIT"
+author = "pbtechfacts"
+author_email = "pbtechfacts@users.noreply.github.com"
+
+[tool.briefcase.app.accessiblecalculator]
+formal_name = "Accessible Calculator"
+description = "A simple screen-reader-friendly calculator for testing."
+sources = ["src/accessiblecalculator"]
+requires = []
+
+[tool.briefcase.app.accessiblecalculator.android]
+requires = ["toga-android~=0.5.5"]
+base_theme = "Theme.MaterialComponents.DayNight.NoActionBar"
