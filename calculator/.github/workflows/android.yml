@@ -1,0 +1,43 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'calculator/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: calculator
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Briefcase
+        run: python -m pip install --upgrade pip briefcase
+
+      - name: Create Android project
+        run: briefcase create android
+
+      - name: Build Android APK
+        run: briefcase build android -u
+
+      - name: Package APK
+        run: |
+          mkdir -p ../apk-output
+          find build -type f -name '*.apk' -exec cp {} ../apk-output/accessible-calculator.apk \;
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessible-calculator-apk
+          path: calculator/apk-output/accessible-calculator.apk
+          if-no-files-found: error
